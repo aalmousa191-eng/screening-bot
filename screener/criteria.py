@@ -99,7 +99,14 @@ def score_stock(stock: dict) -> float:
         "revenue_growth":    (10, True,  20),
         "fcf_yield":         (10, True,  8),
     }
-    total_weight = sum(w for w, _, _ in weights.values())
+    # Only sum weights for metrics where data is actually present,
+    # so missing fields don't deflate the score.
+    active_weight = sum(
+        w for key, (w, _, _) in weights.items()
+        if stock.get(key) is not None
+    )
+    if active_weight == 0:
+        return 0.0
 
     for key, (weight, higher_better, ideal) in weights.items():
         val = stock.get(key)
@@ -118,4 +125,4 @@ def score_stock(stock: dict) -> float:
 
         score += normalized * weight
 
-    return round(score / total_weight * 100, 1)
+    return round(score / active_weight * 100, 1)

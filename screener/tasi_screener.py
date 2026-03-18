@@ -51,6 +51,8 @@ def screen_tasi(
             progress_cb(i + 1, total, ticker)
 
         stock = get_fundamentals(ticker)
+        if stock.get("not_found"):
+            continue  # invalid ticker – no delay needed
         if "error" in stock or not stock.get("market_cap"):
             time.sleep(0.1)
             continue
