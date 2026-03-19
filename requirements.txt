@@ -1,0 +1,4 @@
+tradingview-screener>=0.3.0
+rich>=13.0.0
+pandas>=2.0.0
+click>=8.0.0
