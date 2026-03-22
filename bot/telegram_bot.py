@@ -330,8 +330,13 @@ async def cmd_brief(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 # ── Application factory ───────────────────────────────────────────────────────
 
-def create_application() -> Application:
-    app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
+def create_application(post_init=None, post_shutdown=None) -> Application:
+    builder = Application.builder().token(config.TELEGRAM_BOT_TOKEN)
+    if post_init:
+        builder = builder.post_init(post_init)
+    if post_shutdown:
+        builder = builder.post_shutdown(post_shutdown)
+    app = builder.build()
 
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
