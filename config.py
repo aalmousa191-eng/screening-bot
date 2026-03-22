@@ -1,7 +1,25 @@
 import os
+import logging
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env from the same directory as this file (works regardless of cwd)
+_env_path = Path(__file__).parent / ".env"
+load_dotenv(dotenv_path=_env_path, override=True)
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_chat_ids() -> list[int]:
+    raw = os.getenv("TELEGRAM_ALLOWED_CHAT_IDS", "").strip()
+    logger.info("TELEGRAM_ALLOWED_CHAT_IDS raw value: %r", raw)
+    ids = []
+    for x in raw.split(","):
+        x = x.strip().strip('"').strip("'")   # remove any accidental quotes
+        if x.lstrip("-").isdigit():
+            ids.append(int(x))
+    logger.info("Parsed allowed chat IDs: %s", ids)
+    return ids
 
 
 class Config:
@@ -10,9 +28,9 @@ class Config:
     TELEGRAM_BOT_TOKEN: str = os.environ["TELEGRAM_BOT_TOKEN"]
 
     ALLOWED_CHAT_IDS: list[int] = [
-        int(x.strip())
+        int(x.strip().strip('"').strip("'"))
         for x in os.getenv("TELEGRAM_ALLOWED_CHAT_IDS", "").split(",")
-        if x.strip().lstrip("-").isdigit()
+        if x.strip().strip('"').strip("'").lstrip("-").isdigit()
     ]
 
     MORNING_BRIEF_HOUR: int = int(os.getenv("MORNING_BRIEF_HOUR", "7"))

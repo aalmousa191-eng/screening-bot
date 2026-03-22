@@ -57,9 +57,14 @@ def restricted(func: Callable) -> Callable:
     async def wrapper(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         cid = update.effective_chat.id if update.effective_chat else None
         if config.ALLOWED_CHAT_IDS and cid not in config.ALLOWED_CHAT_IDS:
-            logger.warning("Unauthorized access attempt from chat %s", cid)
+            logger.warning(
+                "Unauthorized chat %s — allowed list: %s", cid, config.ALLOWED_CHAT_IDS
+            )
             if update.message:
-                await update.message.reply_text("⛔ Unauthorized.")
+                await update.message.reply_text(
+                    f"⛔ Chat ID {cid} is not authorized.\n"
+                    f"Add it to TELEGRAM_ALLOWED_CHAT_IDS in your .env file."
+                )
             return
         await func(update, ctx)
     return wrapper

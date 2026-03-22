@@ -42,6 +42,8 @@ async def post_shutdown(app: Application) -> None:
 
 if __name__ == "__main__":
     logger.info("Starting AI Stock Analysis Bot…")
+    from config import config
+    logger.info("Allowed chat IDs: %s", config.ALLOWED_CHAT_IDS)
     app = create_application(post_init=post_init, post_shutdown=post_shutdown)
     # run_polling() handles: initialize → start → poll → stop → shutdown
     app.run_polling(drop_pending_updates=True)
