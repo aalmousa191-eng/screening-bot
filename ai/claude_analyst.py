@@ -225,6 +225,29 @@ async def quick_analysis(ticker: str, snapshot: dict) -> str:
         return f"Analysis unavailable: {e}"
 
 
+# ── General Q&A ───────────────────────────────────────────────────────────────
+
+async def ask_claude(question: str) -> str:
+    """Answer a general question using Claude."""
+    system = (
+        "You are a knowledgeable assistant with expertise in finance, investing, "
+        "economics, and general topics. Give clear, concise, accurate answers. "
+        "Use plain text — no markdown headers. Keep responses under 400 words unless "
+        "the question genuinely requires more detail."
+    )
+    try:
+        message = await _client.messages.create(
+            model=MODEL,
+            max_tokens=1024,
+            system=system,
+            messages=[{"role": "user", "content": question}],
+        )
+        return message.content[0].text.strip()
+    except Exception as e:
+        logger.error("Claude Q&A failed: %s", e)
+        return f"Sorry, I couldn't answer that: {e}"
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _fmt_large(v: float | None) -> str:

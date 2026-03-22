@@ -10,6 +10,8 @@ from telegram import Update, BotCommand
 from telegram.ext import (
     Application,
     CommandHandler,
+    MessageHandler,
+    filters,
     ContextTypes,
 )
 from telegram.constants import ParseMode
@@ -19,7 +21,7 @@ from analysis.technical import calculate_indicators, build_snapshot, format_tech
 from analysis.fundamental import parse_fundamentals, format_fundamental_report
 from analysis.market_movers import get_market_overview, format_movers_report
 from analysis.screener import run_screener, format_screener_report
-from ai.claude_analyst import analyze_stock, quick_analysis, generate_morning_brief
+from ai.claude_analyst import analyze_stock, quick_analysis, generate_morning_brief, ask_claude
 from utils.formatters import split_message
 from config import config
 
@@ -97,8 +99,10 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         "/movers — Top gainers, losers, and most active stocks\n"
         "/screen — Run screener: top 20 stocks to watch\n"
         "/brief — Generate today's morning market brief\n"
+        "/ask &lt;question&gt; — Ask Claude any general question\n"
         "/status — Bot and market status\n"
         "/help — Show this message\n\n"
+        "💬 <b>Or just type any question</b> and Claude will answer it.\n\n"
         "📅 <b>Daily Automation:</b>\n"
         f"• Screener runs at {config.SCREENER_HOUR:02d}:{config.SCREENER_MINUTE:02d} ET\n"
         f"• Morning brief at {config.MORNING_BRIEF_HOUR:02d}:{config.MORNING_BRIEF_MINUTE:02d} ET\n\n"
@@ -333,6 +337,36 @@ async def cmd_brief(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await msg.edit_text(f"❌ Error generating brief: {e}")
 
 
+@restricted
+async def cmd_ask(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """/ask <question> — ask Claude any general question."""
+    question = " ".join(ctx.args) if ctx.args else ""
+    if not question:
+        await update.message.reply_text(
+            "Usage: /ask &lt;your question&gt;\n"
+            "Example: <code>/ask What is the difference between P/E and P/S ratio?</code>",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    await _typing(update)
+    msg = await update.message.reply_text("🤔 Thinking…")
+    answer = await ask_claude(question)
+    await msg.edit_text(answer)
+
+
+@restricted
+async def handle_text_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle plain text messages as general questions to Claude."""
+    question = update.message.text.strip()
+    if not question:
+        return
+    await _typing(update)
+    msg = await update.message.reply_text("🤔 Thinking…")
+    answer = await ask_claude(question)
+    await msg.edit_text(answer)
+
+
 # ── Application factory ───────────────────────────────────────────────────────
 
 def create_application(post_init=None, post_shutdown=None) -> Application:
@@ -352,6 +386,8 @@ def create_application(post_init=None, post_shutdown=None) -> Application:
     app.add_handler(CommandHandler("movers", cmd_movers))
     app.add_handler(CommandHandler("screen", cmd_screen))
     app.add_handler(CommandHandler("brief", cmd_brief))
+    app.add_handler(CommandHandler("ask", cmd_ask))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
 
     return app
 
@@ -364,6 +400,7 @@ async def set_bot_commands(app: Application) -> None:
         BotCommand("movers", "Top gainers, losers & most active"),
         BotCommand("screen", "Top 20 stocks to watch (screener)"),
         BotCommand("brief", "Generate today's morning brief"),
+        BotCommand("ask", "Ask Claude any general question"),
         BotCommand("status", "Bot and market status"),
         BotCommand("help", "Show all commands"),
     ]
